@@ -21,24 +21,22 @@ def agg_cal(df:pd.DataFrame,
     return df.reset_index(drop=False)
 
 def generate_feature_lxm(df, 
-                         group_col:list, 
-                         val_col:list, 
-                         agg_fn:list, 
-                         sub_fn:list = ['avg'], 
+                         groupby:list, 
+                         aggfunc:dict,  
                          LxM:list=[3,6,9]):
     """
         required columns: ['last_x_months']
     """
     result_lst = []
-    for val in val_col:
-        for mth_counts in LxM: 
-            mth_counts += 1 # plus 1 month distance for PCB data to update
-            df_lxm = time_travel(df, mth_counts)
-            result = agg_cal(df_lxm, group_col, val, mth_counts, agg_fn, sub_fn)
-            result.columns = [col+f'_l{mth_counts}m' for col in result.columns]
-            result_lst.append(result)
+    for mth_counts in LxM: 
+        mth_counts += 1 # plus 1 month distance for PCB data to update
+        df_lxm = time_travel(df, mth_counts)
+        result = agg_cal(df_lxm, groupby, aggfunc)
+        feat_col = list(set(result.columns)-set(groupby))
+        result.columns = [col+f'_l{mth_counts}m' if col in feat_col else col for col in result.columns]
+        result_lst.append(result)
         
-    final_df = reduce(lambda  left,right: pd.merge(left, right, on=group_col, how='outer'), result_lst)
+    final_df = reduce(lambda  left,right: pd.merge(left, right, on=groupby, how='outer'), result_lst)
     return final_df
 
 
